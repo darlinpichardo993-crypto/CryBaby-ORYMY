@@ -1,0 +1,17 @@
+CRY BABY AUTO WAH - source code
+Copyright (c) 2026 ORYMY / YMY Records. All rights reserved.
+
+This source code is proprietary. You may not copy, modify, distribute or sell it
+or binaries built from it without written permission from the copyright holder.
+(Replace this file with the licence you prefer, for example MIT, before publishing
+a public repository.)
+
+THIRD-PARTY SOFTWARE
+This project links against JUCE (https://juce.com), which is dual-licensed:
+AGPLv3 / commercial. Distributing closed-source or commercial plugin binaries
+requires a JUCE commercial licence. See https://juce.com/juce-8-licence/ .
+
+TRADEMARKS
+"Cry Baby" is a trademark of its respective owner (Dunlop / Jim Dunlop).
+This project is not affiliated with or endorsed by them. Review naming and
+artwork before any commercial release.
