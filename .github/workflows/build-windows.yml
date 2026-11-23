@@ -1,0 +1,72 @@
+name: Windows VST3 build
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crybaby-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build VST3 (Windows x64)
+    runs-on: windows-2022
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configure
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCBAW_BUILD_STANDALONE=ON -DCBAW_BUILD_TESTS=ON
+
+      - name: Build Release
+        run: cmake --build build --config Release --parallel
+
+      - name: Run DSP tests
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Verify VST3 bundle
+        shell: pwsh
+        run: |
+          $plugin = "build/CryBabyAutoWah_artefacts/Release/VST3/CRY BABY AUTO WAH.vst3"
+          if (!(Test-Path $plugin)) {
+            Write-Error "VST3 bundle was not produced at: $plugin"
+            Get-ChildItem build -Recurse -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName
+            exit 1
+          }
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Compress-Archive -Path $plugin -DestinationPath "dist/CryBabyAutoWah-VST3-win64.zip" -Force
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (!(Test-Path $iscc)) { $iscc = "${env:ProgramFiles}\Inno Setup 6\ISCC.exe" }
+          if (!(Test-Path $iscc)) { throw "Inno Setup compiler not found" }
+          & $iscc "/DMyAppVersion=1.0.0" "Installer/CryBabyAutoWah.iss"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (!(Test-Path "Builds/Installer/CryBabyAutoWah-Setup-1.0.0.exe")) {
+            Get-ChildItem Builds -Recurse -ErrorAction SilentlyContinue
+            throw "Installer output was not produced"
+          }
+
+      - name: Upload VST3 and installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: CryBabyAutoWah-Windows-x64
+          path: |
+            dist/CryBabyAutoWah-VST3-win64.zip
+            Builds/Installer/CryBabyAutoWah-Setup-1.0.0.exe
+          if-no-files-found: error
+          retention-days: 30
